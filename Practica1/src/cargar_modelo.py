@@ -12,7 +12,6 @@ Requisitos: Python 3.10+, pandas, SQLAlchemy, pyodbc y ODBC Driver 18.
 
 from __future__ import annotations
 
-import argparse
 from datetime import datetime
 import hashlib
 import os
@@ -50,6 +49,7 @@ COLUMNAS_ORIGINALES_REQUERIDAS = (
     "bags_total", "bags_checked",
 )
 
+RUTA_DATASET_ORIGINAL = Path("data/dataset_vuelos_crudo.csv")
 RUTA_DATASET_LIMPIO = Path("data/dataset_vuelos_limpio.csv")
 
 
@@ -570,31 +570,12 @@ def mostrar_resultados(original: pd.DataFrame, limpio: pd.DataFrame) -> None:
 # ============================================================
 
 def main() -> int:
-    """Procesar argumentos, mostrar los resultados y ejecutar la carga."""
-    analizador = argparse.ArgumentParser(
-        description="Proceso ETL y carga del modelo dimensional de vuelos"
-    )
-    analizador.add_argument(
-        "dataset",
-        nargs="?",
-        default="data/dataset_vuelos_crudo.csv",
-        help="Ruta del dataset original",
-    )
-    analizador.add_argument(
-        "--validar",
-        action="store_true",
-        help="Generar el dataset limpio sin conectarse a SQL Server",
-    )
-    argumentos = analizador.parse_args()
-
-    ruta_original = Path(argumentos.dataset)
+    """Ejecutar el proceso ETL completo desde el dataset original."""
+    ruta_original = RUTA_DATASET_ORIGINAL
     datos_originales = leer_dataset_original(ruta_original)
     datos_limpios = transformar_dataset(datos_originales)
     guardar_dataset_limpio(datos_limpios, RUTA_DATASET_LIMPIO)
     mostrar_resultados(datos_originales, datos_limpios)
-
-    if argumentos.validar:
-        return 0
 
     resultado = cargar_dataset(datos_limpios, ruta_original.name)
     imprimir_tabla(

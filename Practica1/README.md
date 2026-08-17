@@ -75,6 +75,10 @@ La comparación reproducible de ambos archivos confirma los siguientes tratamien
 
 El resumen se calcula automáticamente comparando ambos CSV durante la ejecución del programa.
 
+Antes de realizar la carga, el programa comprueba la estructura, la unicidad de los registros y la compatibilidad de los datos con el modelo dimensional.
+
+![Validación del dataset limpio](images/validacion_dataset.png)
+
 ## Granularidad y modelo dimensional
 
 La tabla `FactVueloPasajero` almacena una fila por pasajero, reserva y segmento de vuelo. `RecordID` identifica cada registro del archivo y garantiza la idempotencia de la carga.
@@ -170,29 +174,3 @@ El programa presenta consecutivamente la muestra original, la muestra limpia, el
 En cada ejecución, `data/dataset_vuelos_limpio.csv` se vuelve a generar desde `data/dataset_vuelos_crudo.csv`; el archivo limpio no se utiliza como entrada del proceso.
 
 Después de la carga, ejecutar nuevamente la sección de consultas técnicas incluida al final de `sql/carga_validacion_dwh.sql`.
-
-### Validación sin SQL Server
-
-```powershell
-python src/cargar_modelo.py --validar
-```
-
-![Validación del dataset limpio](images/validacion_dataset.png)
-
-Esta opción genera nuevamente el dataset limpio, presenta las cuatro tablas en el mismo orden y finaliza antes de establecer la conexión con SQL Server.
-
-## Validaciones esperadas en SQL Server
-
-| Validación | Resultado esperado |
-|---|---:|
-| Filas en staging | 10,000 |
-| Filas en la tabla de hechos | 10,000 |
-| Versiones actuales de pasajero | 10,000 |
-| `RecordID` duplicados | 0 |
-| Pasajeros con más de una versión actual | 0 |
-| Versiones actuales con fecha final | 0 |
-| Versiones históricas sin fecha final | 0 |
-| Vigencias temporales invertidas | 0 |
-| Vuelos cancelados con llegada nula | 560 |
-
-La vista `v_AnalisisVuelos` expone dimensiones y medidas con nombres descriptivos para las consultas analíticas posteriores.
