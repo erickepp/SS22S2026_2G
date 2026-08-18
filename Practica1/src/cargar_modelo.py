@@ -17,9 +17,11 @@ import hashlib
 import os
 from pathlib import Path
 from urllib.parse import quote_plus
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import pandas as pd
-
 
 # ============================================================
 # 1. CONFIGURACIÓN DE COLUMNAS
@@ -27,35 +29,73 @@ import pandas as pd
 
 # Definir el esquema esperado para detectar columnas faltantes o inesperadas.
 COLUMNAS_LIMPIAS = (
-    "RecordID", "AerolineaCodigo", "AerolineaNombre", "NumeroVuelo",
-    "VueloNaturalKey", "AeropuertoOrigenCodigo", "AeropuertoDestinoCodigo",
-    "FechaHoraSalida", "FechaHoraLlegada", "DuracionMinutos",
-    "EstadoVueloCodigo", "RetrasoMinutos", "TipoAeronaveCodigo",
-    "ClaseCabinaCodigo", "Asiento", "PasajeroID", "GeneroCodigo",
-    "EdadPasajero", "NacionalidadCodigo", "FechaHoraReserva",
-    "CanalVentaCodigo", "MetodoPagoCodigo", "PrecioBoleto",
-    "MonedaCodigo", "PrecioUSD", "EquipajeTotal", "EquipajeFacturado",
+    "RecordID",
+    "AerolineaCodigo",
+    "AerolineaNombre",
+    "NumeroVuelo",
+    "VueloNaturalKey",
+    "AeropuertoOrigenCodigo",
+    "AeropuertoDestinoCodigo",
+    "FechaHoraSalida",
+    "FechaHoraLlegada",
+    "DuracionMinutos",
+    "EstadoVueloCodigo",
+    "RetrasoMinutos",
+    "TipoAeronaveCodigo",
+    "ClaseCabinaCodigo",
+    "Asiento",
+    "PasajeroID",
+    "GeneroCodigo",
+    "EdadPasajero",
+    "NacionalidadCodigo",
+    "FechaHoraReserva",
+    "CanalVentaCodigo",
+    "MetodoPagoCodigo",
+    "PrecioBoleto",
+    "MonedaCodigo",
+    "PrecioUSD",
+    "EquipajeTotal",
+    "EquipajeFacturado",
     "HashPasajero",
 )
 
 COLUMNAS_ORIGINALES_REQUERIDAS = (
-    "record_id", "airline_code", "airline_name", "flight_number",
-    "origin_airport", "destination_airport", "departure_datetime",
-    "arrival_datetime", "duration_min", "status", "delay_min",
-    "aircraft_type", "cabin_class", "seat", "passenger_id",
-    "passenger_gender", "passenger_age", "passenger_nationality",
-    "booking_datetime", "sales_channel", "payment_method",
-    "ticket_price", "currency", "ticket_price_usd_est",
-    "bags_total", "bags_checked",
+    "record_id",
+    "airline_code",
+    "airline_name",
+    "flight_number",
+    "origin_airport",
+    "destination_airport",
+    "departure_datetime",
+    "arrival_datetime",
+    "duration_min",
+    "status",
+    "delay_min",
+    "aircraft_type",
+    "cabin_class",
+    "seat",
+    "passenger_id",
+    "passenger_gender",
+    "passenger_age",
+    "passenger_nationality",
+    "booking_datetime",
+    "sales_channel",
+    "payment_method",
+    "ticket_price",
+    "currency",
+    "ticket_price_usd_est",
+    "bags_total",
+    "bags_checked",
 )
 
-RUTA_DATASET_ORIGINAL = Path("data/dataset_vuelos_crudo.csv")
-RUTA_DATASET_LIMPIO = Path("data/dataset_vuelos_limpio.csv")
+RUTA_DATASET_ORIGINAL = Path("../data/dataset_vuelos_crudo.csv")
+RUTA_DATASET_LIMPIO = Path("../data/dataset_vuelos_limpio.csv")
 
 
 # ============================================================
 # 2. EXTRACCIÓN DEL DATASET
 # ============================================================
+
 
 def leer_dataset_original(ruta: Path) -> pd.DataFrame:
     """Leer el CSV crudo como texto para conservar sus formatos originales."""
@@ -63,7 +103,9 @@ def leer_dataset_original(ruta: Path) -> pd.DataFrame:
         raise FileNotFoundError(f"No existe el dataset original: {ruta}")
 
     datos = pd.read_csv(ruta, dtype=str, keep_default_na=False)
-    faltantes = [columna for columna in COLUMNAS_ORIGINALES_REQUERIDAS if columna not in datos]
+    faltantes = [
+        columna for columna in COLUMNAS_ORIGINALES_REQUERIDAS if columna not in datos
+    ]
     if faltantes:
         raise ValueError(f"El dataset original no contiene las columnas: {faltantes}")
     return datos.loc[:, COLUMNAS_ORIGINALES_REQUERIDAS].copy()
@@ -72,6 +114,7 @@ def leer_dataset_original(ruta: Path) -> pd.DataFrame:
 # ============================================================
 # 3. TRANSFORMACIÓN Y VALIDACIÓN
 # ============================================================
+
 
 def _normalizar_texto(serie: pd.Series) -> pd.Series:
     """Eliminar espacios y homologar valores de texto en mayúsculas."""
@@ -113,7 +156,9 @@ def _candidatos_fecha(valor: object) -> list[tuple[pd.Timestamp, int]]:
     return candidatos
 
 
-def _resolver_fechas_fila(fila: object) -> tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp]:
+def _resolver_fechas_fila(
+    fila: object,
+) -> tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp]:
     """Resolver fechas ambiguas mediante las reglas temporales del vuelo."""
     salidas = _candidatos_fecha(fila.departure_datetime)
     llegadas = _candidatos_fecha(fila.arrival_datetime)
@@ -178,57 +223,73 @@ def transformar_dataset(original: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("El dataset original contiene RecordID duplicados.")
 
     fechas = [_resolver_fechas_fila(fila) for fila in fuente.itertuples(index=False)]
-    genero = _normalizar_texto(fuente["passenger_gender"]).map({
-        "M": "M", "MASCULINO": "M",
-        "F": "F", "FEMENINO": "F",
-        "X": "X", "NOBINARIO": "X",
-    })
+    genero = _normalizar_texto(fuente["passenger_gender"]).map(
+        {
+            "M": "M",
+            "MASCULINO": "M",
+            "F": "F",
+            "FEMENINO": "F",
+            "X": "X",
+            "NOBINARIO": "X",
+        }
+    )
     if genero.isna().any():
-        raise ValueError("El dataset original contiene valores de género no reconocidos.")
-    nacionalidad = _normalizar_texto(
-        fuente["passenger_nationality"]
-    ).replace("", "ZZ")
-    canal_venta = _normalizar_texto(
-        fuente["sales_channel"]
-    ).replace("", "DESCONOCIDO")
+        raise ValueError(
+            "El dataset original contiene valores de género no reconocidos."
+        )
+    nacionalidad = _normalizar_texto(fuente["passenger_nationality"]).replace("", "ZZ")
+    canal_venta = _normalizar_texto(fuente["sales_channel"]).replace("", "DESCONOCIDO")
 
-    limpio = pd.DataFrame({
-        "RecordID": _convertir_numero(fuente["record_id"]).astype("Int64"),
-        "AerolineaCodigo": _normalizar_texto(fuente["airline_code"]),
-        "AerolineaNombre": _normalizar_texto(fuente["airline_name"]),
-        "NumeroVuelo": _normalizar_texto(fuente["flight_number"]),
-        "AeropuertoOrigenCodigo": _normalizar_texto(fuente["origin_airport"]),
-        "AeropuertoDestinoCodigo": _normalizar_texto(fuente["destination_airport"]),
-        "FechaHoraSalida": [fecha[0] for fecha in fechas],
-        "FechaHoraLlegada": [fecha[1] for fecha in fechas],
-        "DuracionMinutos": _convertir_numero(fuente["duration_min"]).astype("Int64"),
-        "EstadoVueloCodigo": _normalizar_texto(fuente["status"]),
-        "RetrasoMinutos": _convertir_numero(fuente["delay_min"]).astype("Int64"),
-        "TipoAeronaveCodigo": _normalizar_texto(fuente["aircraft_type"]),
-        "ClaseCabinaCodigo": _normalizar_texto(fuente["cabin_class"]),
-        "Asiento": _normalizar_texto(fuente["seat"]).replace("", pd.NA),
-        "PasajeroID": fuente["passenger_id"].astype("string").str.strip().str.lower(),
-        "GeneroCodigo": genero,
-        "EdadPasajero": _convertir_numero(fuente["passenger_age"]).astype("Int64"),
-        "NacionalidadCodigo": nacionalidad,
-        "FechaHoraReserva": [fecha[2] for fecha in fechas],
-        "CanalVentaCodigo": canal_venta,
-        "MetodoPagoCodigo": _normalizar_texto(fuente["payment_method"]),
-        "PrecioBoleto": _convertir_numero(fuente["ticket_price"], coma_decimal=True),
-        "MonedaCodigo": _normalizar_texto(fuente["currency"]),
-        "PrecioUSD": _convertir_numero(fuente["ticket_price_usd_est"]),
-        "EquipajeTotal": _convertir_numero(fuente["bags_total"]).astype("Int64"),
-        "EquipajeFacturado": _convertir_numero(fuente["bags_checked"]).astype("Int64"),
-    })
+    limpio = pd.DataFrame(
+        {
+            "RecordID": _convertir_numero(fuente["record_id"]).astype("Int64"),
+            "AerolineaCodigo": _normalizar_texto(fuente["airline_code"]),
+            "AerolineaNombre": _normalizar_texto(fuente["airline_name"]),
+            "NumeroVuelo": _normalizar_texto(fuente["flight_number"]),
+            "AeropuertoOrigenCodigo": _normalizar_texto(fuente["origin_airport"]),
+            "AeropuertoDestinoCodigo": _normalizar_texto(fuente["destination_airport"]),
+            "FechaHoraSalida": [fecha[0] for fecha in fechas],
+            "FechaHoraLlegada": [fecha[1] for fecha in fechas],
+            "DuracionMinutos": _convertir_numero(fuente["duration_min"]).astype(
+                "Int64"
+            ),
+            "EstadoVueloCodigo": _normalizar_texto(fuente["status"]),
+            "RetrasoMinutos": _convertir_numero(fuente["delay_min"]).astype("Int64"),
+            "TipoAeronaveCodigo": _normalizar_texto(fuente["aircraft_type"]),
+            "ClaseCabinaCodigo": _normalizar_texto(fuente["cabin_class"]),
+            "Asiento": _normalizar_texto(fuente["seat"]).replace("", pd.NA),
+            "PasajeroID": fuente["passenger_id"]
+            .astype("string")
+            .str.strip()
+            .str.lower(),
+            "GeneroCodigo": genero,
+            "EdadPasajero": _convertir_numero(fuente["passenger_age"]).astype("Int64"),
+            "NacionalidadCodigo": nacionalidad,
+            "FechaHoraReserva": [fecha[2] for fecha in fechas],
+            "CanalVentaCodigo": canal_venta,
+            "MetodoPagoCodigo": _normalizar_texto(fuente["payment_method"]),
+            "PrecioBoleto": _convertir_numero(
+                fuente["ticket_price"], coma_decimal=True
+            ),
+            "MonedaCodigo": _normalizar_texto(fuente["currency"]),
+            "PrecioUSD": _convertir_numero(fuente["ticket_price_usd_est"]),
+            "EquipajeTotal": _convertir_numero(fuente["bags_total"]).astype("Int64"),
+            "EquipajeFacturado": _convertir_numero(fuente["bags_checked"]).astype(
+                "Int64"
+            ),
+        }
+    )
 
     claves_vuelo = limpio.apply(
-        lambda fila: "|".join((
-            fila["AerolineaCodigo"],
-            fila["NumeroVuelo"],
-            pd.Timestamp(fila["FechaHoraSalida"]).isoformat(),
-            fila["AeropuertoOrigenCodigo"],
-            fila["AeropuertoDestinoCodigo"],
-        )),
+        lambda fila: "|".join(
+            (
+                fila["AerolineaCodigo"],
+                fila["NumeroVuelo"],
+                pd.Timestamp(fila["FechaHoraSalida"]).isoformat(),
+                fila["AeropuertoOrigenCodigo"],
+                fila["AeropuertoDestinoCodigo"],
+            )
+        ),
         axis=1,
     )
     limpio.insert(4, "VueloNaturalKey", claves_vuelo.map(_crear_hash))
@@ -241,7 +302,9 @@ def transformar_dataset(original: pd.DataFrame) -> pd.DataFrame:
 def validar_dataset_limpio(datos: pd.DataFrame) -> pd.DataFrame:
     """Comprobar las reglas del dataset transformado antes de cargar el DWH."""
     faltantes = [columna for columna in COLUMNAS_LIMPIAS if columna not in datos]
-    inesperadas = [columna for columna in datos.columns if columna not in COLUMNAS_LIMPIAS]
+    inesperadas = [
+        columna for columna in datos.columns if columna not in COLUMNAS_LIMPIAS
+    ]
     if faltantes or inesperadas:
         raise ValueError(
             f"Estructura del dataset inválida. Faltantes={faltantes}; "
@@ -257,14 +320,25 @@ def validar_dataset_limpio(datos: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("RecordID contiene valores vacíos o duplicados.")
 
     texto_obligatorio = (
-        "AerolineaCodigo", "AerolineaNombre", "NumeroVuelo",
-        "AeropuertoOrigenCodigo", "AeropuertoDestinoCodigo",
-        "EstadoVueloCodigo", "TipoAeronaveCodigo", "ClaseCabinaCodigo",
-        "PasajeroID", "GeneroCodigo", "NacionalidadCodigo",
-        "CanalVentaCodigo", "MetodoPagoCodigo", "MonedaCodigo",
+        "AerolineaCodigo",
+        "AerolineaNombre",
+        "NumeroVuelo",
+        "AeropuertoOrigenCodigo",
+        "AeropuertoDestinoCodigo",
+        "EstadoVueloCodigo",
+        "TipoAeronaveCodigo",
+        "ClaseCabinaCodigo",
+        "PasajeroID",
+        "GeneroCodigo",
+        "NacionalidadCodigo",
+        "CanalVentaCodigo",
+        "MetodoPagoCodigo",
+        "MonedaCodigo",
     )
     for columna in texto_obligatorio:
-        vacios = datos[columna].isna() | datos[columna].astype("string").str.strip().eq("")
+        vacios = datos[columna].isna() | datos[columna].astype("string").str.strip().eq(
+            ""
+        )
         if vacios.any():
             raise ValueError(f"{columna} contiene valores vacíos.")
 
@@ -281,7 +355,10 @@ def validar_dataset_limpio(datos: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("Existen fechas que no respetan la secuencia temporal.")
 
     numericas_obligatorias = (
-        "PrecioBoleto", "PrecioUSD", "EquipajeTotal", "EquipajeFacturado",
+        "PrecioBoleto",
+        "PrecioUSD",
+        "EquipajeTotal",
+        "EquipajeFacturado",
     )
     if datos.loc[:, list(numericas_obligatorias)].isna().any().any():
         raise ValueError("Existen valores numéricos obligatorios inválidos.")
@@ -296,18 +373,24 @@ def validar_dataset_limpio(datos: pd.DataFrame) -> pd.DataFrame:
     if not datos["EdadPasajero"].dropna().between(0, 120).all():
         raise ValueError("Existen edades fuera del rango permitido.")
 
-    pasajero_id_valido = datos["PasajeroID"].astype("string").str.fullmatch(
-        r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
-        na=False,
+    pasajero_id_valido = (
+        datos["PasajeroID"]
+        .astype("string")
+        .str.fullmatch(
+            r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+            na=False,
+        )
     )
     if not pasajero_id_valido.all():
         raise ValueError("PasajeroID contiene identificadores inválidos.")
 
-    vuelo_valido = datos["VueloNaturalKey"].astype("string").str.fullmatch(
-        r"[0-9a-f]{64}", na=False
+    vuelo_valido = (
+        datos["VueloNaturalKey"]
+        .astype("string")
+        .str.fullmatch(r"[0-9a-f]{64}", na=False)
     )
-    pasajero_valido = datos["HashPasajero"].astype("string").str.fullmatch(
-        r"[0-9a-f]{64}", na=False
+    pasajero_valido = (
+        datos["HashPasajero"].astype("string").str.fullmatch(r"[0-9a-f]{64}", na=False)
     )
     if not vuelo_valido.all():
         raise ValueError("VueloNaturalKey contiene hashes inválidos.")
@@ -331,6 +414,7 @@ def guardar_dataset_limpio(datos: pd.DataFrame, ruta: Path) -> None:
 # 4. FORMATO DE TABLAS PARA CONSOLA
 # ============================================================
 
+
 def _texto_celda(valor: object) -> str:
     """Convertir valores de pandas a texto compacto para las tablas de consola."""
     if pd.isna(valor) or valor == "":
@@ -345,7 +429,10 @@ def _texto_celda(valor: object) -> str:
 def imprimir_tabla(titulo: str, tabla: pd.DataFrame) -> None:
     """Imprimir un DataFrame como tabla ASCII reproducible en cualquier terminal."""
     encabezados = [str(columna) for columna in tabla.columns]
-    filas = [[_texto_celda(valor) for valor in fila] for fila in tabla.itertuples(index=False)]
+    filas = [
+        [_texto_celda(valor) for valor in fila]
+        for fila in tabla.itertuples(index=False)
+    ]
     anchos = [
         max(len(encabezado), *(len(fila[indice]) for fila in filas))
         for indice, encabezado in enumerate(encabezados)
@@ -358,10 +445,18 @@ def imprimir_tabla(titulo: str, tabla: pd.DataFrame) -> None:
     print(titulo)
     print("=" * len(borde))
     print(borde)
-    print("| " + " | ".join(texto.ljust(anchos[i]) for i, texto in enumerate(encabezados)) + " |")
+    print(
+        "| "
+        + " | ".join(texto.ljust(anchos[i]) for i, texto in enumerate(encabezados))
+        + " |"
+    )
     print(separador)
     for fila in filas:
-        print("| " + " | ".join(texto.ljust(anchos[i]) for i, texto in enumerate(fila)) + " |")
+        print(
+            "| "
+            + " | ".join(texto.ljust(anchos[i]) for i, texto in enumerate(fila))
+            + " |"
+        )
     print(borde)
 
 
@@ -369,39 +464,66 @@ def imprimir_tabla(titulo: str, tabla: pd.DataFrame) -> None:
 # 5. MUESTRAS Y RESUMEN DE TRANSFORMACIONES
 # ============================================================
 
+
 def imprimir_muestra_original(datos: pd.DataFrame) -> None:
     """Presentar diez filas crudas con las columnas más útiles para comparar."""
-    muestra = datos.loc[:, [
-        "record_id", "origin_airport", "destination_airport",
-        "departure_datetime", "status", "passenger_gender",
-        "ticket_price",
-    ]].head(10).rename(columns={
-        "record_id": "ID",
-        "origin_airport": "Origen",
-        "destination_airport": "Destino",
-        "departure_datetime": "Salida",
-        "status": "Estado",
-        "passenger_gender": "Género",
-        "ticket_price": "Precio",
-    })
+    muestra = (
+        datos.loc[
+            :,
+            [
+                "record_id",
+                "origin_airport",
+                "destination_airport",
+                "departure_datetime",
+                "status",
+                "passenger_gender",
+                "ticket_price",
+            ],
+        ]
+        .head(10)
+        .rename(
+            columns={
+                "record_id": "ID",
+                "origin_airport": "Origen",
+                "destination_airport": "Destino",
+                "departure_datetime": "Salida",
+                "status": "Estado",
+                "passenger_gender": "Género",
+                "ticket_price": "Precio",
+            }
+        )
+    )
     imprimir_tabla("DATASET ORIGINAL - PRIMEROS 10 REGISTROS", muestra)
 
 
 def imprimir_muestra_limpia(datos: pd.DataFrame) -> None:
     """Presentar las mismas variables después de la estandarización."""
-    muestra = datos.loc[:, [
-        "RecordID", "AeropuertoOrigenCodigo", "AeropuertoDestinoCodigo",
-        "FechaHoraSalida", "EstadoVueloCodigo", "GeneroCodigo",
-        "PrecioBoleto",
-    ]].head(10).rename(columns={
-        "RecordID": "ID",
-        "AeropuertoOrigenCodigo": "Origen",
-        "AeropuertoDestinoCodigo": "Destino",
-        "FechaHoraSalida": "Salida",
-        "EstadoVueloCodigo": "Estado",
-        "GeneroCodigo": "Género",
-        "PrecioBoleto": "Precio",
-    })
+    muestra = (
+        datos.loc[
+            :,
+            [
+                "RecordID",
+                "AeropuertoOrigenCodigo",
+                "AeropuertoDestinoCodigo",
+                "FechaHoraSalida",
+                "EstadoVueloCodigo",
+                "GeneroCodigo",
+                "PrecioBoleto",
+            ],
+        ]
+        .head(10)
+        .rename(
+            columns={
+                "RecordID": "ID",
+                "AeropuertoOrigenCodigo": "Origen",
+                "AeropuertoDestinoCodigo": "Destino",
+                "FechaHoraSalida": "Salida",
+                "EstadoVueloCodigo": "Estado",
+                "GeneroCodigo": "Género",
+                "PrecioBoleto": "Precio",
+            }
+        )
+    )
     imprimir_tabla("DATASET LIMPIO - PRIMEROS 10 REGISTROS", muestra)
 
 
@@ -416,17 +538,20 @@ def calcular_resumen_transformaciones(
     comparacion = fuente.merge(destino, on="_id", how="inner", validate="one_to_one")
 
     aeropuertos = int(
-        comparacion["origin_airport"].str.strip().ne(
-            comparacion["AeropuertoOrigenCodigo"].astype(str)
-        ).sum()
-        + comparacion["destination_airport"].str.strip().ne(
-            comparacion["AeropuertoDestinoCodigo"].astype(str)
-        ).sum()
+        comparacion["origin_airport"]
+        .str.strip()
+        .ne(comparacion["AeropuertoOrigenCodigo"].astype(str))
+        .sum()
+        + comparacion["destination_airport"]
+        .str.strip()
+        .ne(comparacion["AeropuertoDestinoCodigo"].astype(str))
+        .sum()
     )
     generos = int(
-        comparacion["passenger_gender"].str.strip().ne(
-            comparacion["GeneroCodigo"].astype(str)
-        ).sum()
+        comparacion["passenger_gender"]
+        .str.strip()
+        .ne(comparacion["GeneroCodigo"].astype(str))
+        .sum()
     )
 
     # Considerar como formato base día/mes/año con hora de 24 horas.
@@ -445,14 +570,25 @@ def calcular_resumen_transformaciones(
         ("Celdas de aeropuerto normalizadas", aeropuertos),
         ("Valores de género homologados", generos),
         ("Fechas con formato alterno estandarizadas", fechas_alternas),
-        ("Precios con coma decimal convertidos", int(original["ticket_price"].str.contains(",", regex=False).sum())),
-        ("Nacionalidades desconocidas asignadas a ZZ", int(original["passenger_nationality"].str.strip().eq("").sum())),
-        ("Canales desconocidos asignados", int(original["sales_channel"].str.strip().eq("").sum())),
+        (
+            "Precios con coma decimal convertidos",
+            int(original["ticket_price"].str.contains(",", regex=False).sum()),
+        ),
+        (
+            "Nacionalidades desconocidas asignadas a ZZ",
+            int(original["passenger_nationality"].str.strip().eq("").sum()),
+        ),
+        (
+            "Canales desconocidos asignados",
+            int(original["sales_channel"].str.strip().eq("").sum()),
+        ),
     ]
     return pd.DataFrame(filas, columns=["Indicador", "Resultado"])
 
 
-def imprimir_resumen_transformaciones(original: pd.DataFrame, limpio: pd.DataFrame) -> None:
+def imprimir_resumen_transformaciones(
+    original: pd.DataFrame, limpio: pd.DataFrame
+) -> None:
     """Mostrar los cambios cuantificados sin alterar ninguno de los archivos."""
     resumen = calcular_resumen_transformaciones(original, limpio)
     imprimir_tabla("RESUMEN DE TRANSFORMACIONES", resumen)
@@ -481,6 +617,7 @@ def imprimir_resumen_validacion(datos: pd.DataFrame) -> None:
 # ============================================================
 # 6. CONEXIÓN CON SQL SERVER
 # ============================================================
+
 
 def crear_motor_desde_entorno():
     """Crear una conexión SQLAlchemy a partir de variables de entorno."""
@@ -519,6 +656,7 @@ def crear_motor_desde_entorno():
 # 7. CARGA TRANSACCIONAL DEL DWH
 # ============================================================
 
+
 def cargar_dataset(datos: pd.DataFrame, archivo_origen: str) -> dict[str, int]:
     """Cargar staging y ejecutar el procedimiento DWH dentro de una transacción."""
     from sqlalchemy import text
@@ -532,7 +670,9 @@ def cargar_dataset(datos: pd.DataFrame, archivo_origen: str) -> dict[str, int]:
                   CASE WHEN OBJECT_ID(N'dwh.usp_CargarDesdeStaging', N'P') IS NULL THEN 0 ELSE 1 END AS ProcedimientoExiste;
             """)).mappings().one()
             if not objetos["StageExiste"] or not objetos["ProcedimientoExiste"]:
-                raise RuntimeError("El modelo o el procedimiento de carga no están instalados.")
+                raise RuntimeError(
+                    "El modelo o el procedimiento de carga no están instalados."
+                )
 
             # Reemplazar staging con el lote procesado en la transacción actual.
             conexion.execute(text("DELETE FROM stg.VuelosLimpios;"))
@@ -544,10 +684,14 @@ def cargar_dataset(datos: pd.DataFrame, archivo_origen: str) -> dict[str, int]:
                 index=False,
                 chunksize=1_000,
             )
-            resultado = conexion.execute(
-                text("EXEC dwh.usp_CargarDesdeStaging @ArchivoOrigen=:archivo;"),
-                {"archivo": archivo_origen},
-            ).mappings().one()
+            resultado = (
+                conexion.execute(
+                    text("EXEC dwh.usp_CargarDesdeStaging @ArchivoOrigen=:archivo;"),
+                    {"archivo": archivo_origen},
+                )
+                .mappings()
+                .one()
+            )
         return {nombre: int(valor) for nombre, valor in resultado.items()}
     finally:
         motor.dispose()
@@ -556,6 +700,7 @@ def cargar_dataset(datos: pd.DataFrame, archivo_origen: str) -> dict[str, int]:
 # ============================================================
 # 8. PRESENTACIÓN DE RESULTADOS
 # ============================================================
+
 
 def mostrar_resultados(original: pd.DataFrame, limpio: pd.DataFrame) -> None:
     """Mostrar en una sola ejecución las tablas de comparación y validación."""
@@ -568,6 +713,7 @@ def mostrar_resultados(original: pd.DataFrame, limpio: pd.DataFrame) -> None:
 # ============================================================
 # 9. EJECUCIÓN PRINCIPAL
 # ============================================================
+
 
 def main() -> int:
     """Ejecutar el proceso ETL completo desde el dataset original."""
