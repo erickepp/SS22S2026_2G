@@ -1,0 +1,205 @@
+@startuml VuelosDW_ModeloDimensional
+
+skinparam linetype ortho
+skinparam roundcorner 8
+skinparam shadowing false
+skinparam class {
+    BackgroundColor<<staging>> #FDEBD0
+    BackgroundColor<<dimension>> #D6EAF8
+    BackgroundColor<<fact>> #D5F5E3
+    BackgroundColor<<view>> #F5EEF8
+    BorderColor Black
+    ArrowColor #2C3E50
+}
+
+title Modelo Dimensional - VuelosDW
+
+' ==========================
+' STAGING
+' ==========================
+entity "stg.VuelosLimpios" as stg <<staging>> {
+  * RecordID : BIGINT
+  --
+  AerolineaCodigo : VARCHAR(3)
+  AerolineaNombre : NVARCHAR(100)
+  NumeroVuelo : VARCHAR(12)
+  VueloNaturalKey : CHAR(64)
+  AeropuertoOrigenCodigo : CHAR(3)
+  AeropuertoDestinoCodigo : CHAR(3)
+  FechaHoraSalida : DATETIME2(0)
+  FechaHoraLlegada : DATETIME2(0)
+  DuracionMinutos : SMALLINT
+  EstadoVueloCodigo : VARCHAR(20)
+  RetrasoMinutos : SMALLINT
+  TipoAeronaveCodigo : VARCHAR(20)
+  ClaseCabinaCodigo : VARCHAR(30)
+  Asiento : VARCHAR(10)
+  PasajeroID : VARCHAR(36)
+  GeneroCodigo : VARCHAR(5)
+  EdadPasajero : TINYINT
+  NacionalidadCodigo : CHAR(2)
+  FechaHoraReserva : DATETIME2(0)
+  CanalVentaCodigo : VARCHAR(30)
+  MetodoPagoCodigo : VARCHAR(30)
+  PrecioBoleto : DECIMAL(18,2)
+  MonedaCodigo : CHAR(3)
+  PrecioUSD : DECIMAL(18,2)
+  EquipajeTotal : TINYINT
+  EquipajeFacturado : TINYINT
+  HashPasajero : CHAR(64)
+}
+
+' ==========================
+' DIMENSIONES
+' ==========================
+entity "dwh.DimFecha" as dimFecha <<dimension>> {
+  * FechaKey : INT
+  --
+  Fecha : DATE <<unique>>
+  Anio : SMALLINT
+  Trimestre : TINYINT
+  Mes : TINYINT
+  Dia : TINYINT
+}
+
+entity "dwh.DimAerolinea" as dimAerolinea <<dimension>> {
+  * AerolineaKey : INT <<identity>>
+  --
+  AerolineaCodigo : VARCHAR(3) <<unique>>
+  AerolineaNombre : NVARCHAR(100)
+}
+
+entity "dwh.DimAeropuerto" as dimAeropuerto <<dimension>> {
+  * AeropuertoKey : INT <<identity>>
+  --
+  AeropuertoCodigo : CHAR(3) <<unique>>
+}
+
+entity "dwh.DimAeronave" as dimAeronave <<dimension>> {
+  * AeronaveKey : INT <<identity>>
+  --
+  TipoAeronaveCodigo : VARCHAR(20) <<unique>>
+}
+
+entity "dwh.DimClaseCabina" as dimClase <<dimension>> {
+  * ClaseCabinaKey : INT <<identity>>
+  --
+  ClaseCabinaCodigo : VARCHAR(30) <<unique>>
+}
+
+entity "dwh.DimEstadoVuelo" as dimEstado <<dimension>> {
+  * EstadoVueloKey : INT <<identity>>
+  --
+  EstadoVueloCodigo : VARCHAR(20) <<unique>>
+}
+
+entity "dwh.DimCanalVenta" as dimCanal <<dimension>> {
+  * CanalVentaKey : INT <<identity>>
+  --
+  CanalVentaCodigo : VARCHAR(30) <<unique>>
+}
+
+entity "dwh.DimMetodoPago" as dimPago <<dimension>> {
+  * MetodoPagoKey : INT <<identity>>
+  --
+  MetodoPagoCodigo : VARCHAR(30) <<unique>>
+}
+
+entity "dwh.DimMoneda" as dimMoneda <<dimension>> {
+  * MonedaKey : INT <<identity>>
+  --
+  MonedaCodigo : CHAR(3) <<unique>>
+}
+
+entity "dwh.DimPasajero" as dimPasajero <<dimension>> {
+  * PasajeroKey : BIGINT <<identity>>
+  --
+  PasajeroID : UNIQUEIDENTIFIER
+  GeneroCodigo : VARCHAR(5)
+  NacionalidadCodigo : CHAR(2)
+  HashAtributos : CHAR(64)
+  FechaInicio : DATETIME2(0)
+  FechaFin : DATETIME2(0)
+  EsActual : BIT
+  .. SCD Tipo 2 ..
+  Indice unico: PasajeroID WHERE EsActual = 1
+}
+
+' ==========================
+' HECHOS
+' ==========================
+entity "dwh.FactVueloPasajero" as fact <<fact>> {
+  * FactVueloPasajeroKey : BIGINT <<identity>>
+  --
+  RecordID : BIGINT <<unique>>
+  VueloNaturalKey : CHAR(64)
+  # FechaSalidaKey : INT
+  # FechaLlegadaKey : INT
+  # FechaReservaKey : INT
+  # AerolineaKey : INT
+  # AeropuertoOrigenKey : INT
+  # AeropuertoDestinoKey : INT
+  # AeronaveKey : INT
+  # ClaseCabinaKey : INT
+  # EstadoVueloKey : INT
+  # CanalVentaKey : INT
+  # MetodoPagoKey : INT
+  # MonedaKey : INT
+  # PasajeroKey : BIGINT
+  --
+  NumeroVuelo : VARCHAR(12)
+  FechaHoraSalida : DATETIME2(0)
+  FechaHoraLlegada : DATETIME2(0)
+  FechaHoraReserva : DATETIME2(0)
+  DuracionMinutos : SMALLINT
+  RetrasoMinutos : SMALLINT
+  Asiento : VARCHAR(10)
+  EdadPasajero : TINYINT
+  PrecioBoleto : DECIMAL(18,2)
+  PrecioUSD : DECIMAL(18,2)
+  EquipajeTotal : TINYINT
+  EquipajeFacturado : TINYINT
+  ConteoRegistro : TINYINT = 1
+  ArchivoOrigen : NVARCHAR(260)
+  FechaCarga : DATETIME2(0) = SYSUTCDATETIME()
+}
+
+' ==========================
+' VISTA
+' ==========================
+entity "dwh.v_AnalisisVuelos" as vista <<view>> {
+  RecordID, NumeroVuelo
+  FechaSalida, FechaLlegada, FechaReserva
+  AerolineaCodigo, AerolineaNombre
+  AeropuertoOrigen, AeropuertoDestino
+  TipoAeronaveCodigo, ClaseCabinaCodigo
+  EstadoVueloCodigo, CanalVentaCodigo
+  MetodoPagoCodigo, MonedaCodigo
+  PasajeroID, GeneroCodigo, NacionalidadCodigo
+  Precios, Equipaje, Duracion, Retraso
+}
+
+' ==========================
+' RELACIONES (Fact -> Dimensiones)
+' ==========================
+fact }o--|| dimFecha : "FechaSalidaKey"
+fact }o--o| dimFecha : "FechaLlegadaKey"
+fact }o--|| dimFecha : "FechaReservaKey"
+fact }o--|| dimAerolinea : "AerolineaKey"
+fact }o--|| dimAeropuerto : "AeropuertoOrigenKey"
+fact }o--|| dimAeropuerto : "AeropuertoDestinoKey"
+fact }o--|| dimAeronave : "AeronaveKey"
+fact }o--|| dimClase : "ClaseCabinaKey"
+fact }o--|| dimEstado : "EstadoVueloKey"
+fact }o--|| dimCanal : "CanalVentaKey"
+fact }o--|| dimPago : "MetodoPagoKey"
+fact }o--|| dimMoneda : "MonedaKey"
+fact }o--|| dimPasajero : "PasajeroKey"
+
+' Staging alimenta el proceso de carga (referencia lógica, no FK física)
+stg .right.> fact : "ETL / carga"
+
+' La vista consume el hecho y todas las dimensiones
+fact .up.> vista : "expone"
+
+@enduml

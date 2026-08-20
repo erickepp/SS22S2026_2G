@@ -1,4 +1,10 @@
 # Proceso ETL y modelo multidimensional de vuelos
+### Grupo #2 
+| Integrantes |
+|---|
+| Omar Alejandro Vides Esteban | 
+| Tobías Rafael Zamora Santos |
+| Erick Estuardo Patzan Polanco |
 
 ## Descripción
 
@@ -79,6 +85,10 @@ Antes de realizar la carga, el programa comprueba la estructura, la unicidad de 
 
 ![Validación del dataset limpio](images/validacion_dataset.png)
 
+## Diccionario de Datos
+
+[Diccionario de Datos Por Tabla](DiccionarioDatos.md)   
+
 ## Diagrama de BD
 
 ![Diagrama de la base de datos](images/uml.png)
@@ -119,9 +129,12 @@ Cuando el hash recibido difiere del hash vigente, el procedimiento cierra la ver
 
 ## Proceso ETL
 
+### [Diccionario de Datos Por Tabla](DetalleETL.md)   
+
+#### Resumen de Proceso
 1. Leer las 26 columnas del dataset crudo.
 2. Eliminar duplicados y estandarizar textos, fechas, categorías y números.
-3. Generar las claves SHA-256 y exportar las 28 columnas limpias.
+3. Generar las claves SHA-256 y exportar las 28 columnas limpias (se agregan 2 columans para evitar la carga de duplicados e identificar pasajeros al agregarse a la dimension).
 4. Validar el resultado antes de establecer la conexión.
 5. Reemplazar la tabla de staging dentro de una transacción.
 6. Insertar únicamente valores nuevos en las dimensiones estáticas.
@@ -147,6 +160,8 @@ Microsoft ODBC Driver 18 se instala por separado porque corresponde al sistema o
 ## Configuración de conexión
 
 Las credenciales se proporcionan mediante variables de entorno y no se almacenan en el código.
+
+Se adjunta un archivo `.env.template` como referencia de las variables necesarias para el correcto funcionamiento del programa.
 
 Ejemplo en PowerShell:
 
@@ -179,3 +194,7 @@ El programa presenta consecutivamente la muestra original, la muestra limpia, el
 En cada ejecución, `data/dataset_vuelos_limpio.csv` se vuelve a generar desde `data/dataset_vuelos_crudo.csv`; el archivo limpio no se utiliza como entrada del proceso.
 
 Después de la carga, ejecutar nuevamente la sección de consultas técnicas incluida al final de `sql/carga_validacion_dwh.sql`.
+
+Una ejecucion exitosa se denotara por la siguiente tabla resumen del script.
+  
+![Resultado final exitoso de Carga](images/output_final.png)
