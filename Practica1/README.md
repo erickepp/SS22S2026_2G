@@ -79,6 +79,11 @@ Antes de realizar la carga, el programa comprueba la estructura, la unicidad de 
 
 ![Validación del dataset limpio](images/validacion_dataset.png)
 
+## Diagrama de BD
+
+![Diagrama de la base de datos](images/uml.png)
+
+
 ## Granularidad y modelo dimensional
 
 La tabla `FactVueloPasajero` almacena una fila por pasajero, reserva y segmento de vuelo. `RecordID` identifica cada registro del archivo y garantiza la idempotencia de la carga.
